@@ -1,0 +1,87 @@
+1)Fetch date and temperature from temperature_data where zip code is greater than
+300000 and less than 399999.
+
+SELECT 
+from_unixtime(unix_timestamp(date,'yyyy-MM-dd'),'MM-dd-yyyy') as date,
+temperature 
+FROM  custom.temperature_data
+WHERE zip_code > 300000 AND zip_code < 399999 ;
+
+
+2) Calculate maximum temperature corresponding to every year from temperature_data
+table.
+
+select year , temperature , ranking ,zip_code from
+(
+select YEAR(date) as year ,
+temperature,
+rank() OVER (PARTITION by YEAR(date) ORDER by temperature DESC) AS ranking,
+zip_code
+FROM temperature_data
+) table
+WHERE ranking = 1 ;
+
+
+3)Calculate maximum temperature from temperature_data table corresponding to those
+years which have at least 2 entries in the table.
+
+
+
+select year,
+temperature,
+ranking,
+countOfYear
+FROM
+(select year,
+temperature,
+ranking,
+count(year) over (PARTITION BY YEAR) as countOfYear
+from(
+select YEAR(date) as year ,
+temperature,
+rank() OVER (PARTITION by YEAR(date) ORDER by temperature DESC) AS ranking,
+COUNT(YEAR(date)) OVER (PARTITION by YEAR(date)  ) AS count
+FROM temperature_data
+)table1
+WHERE ranking = 1 
+) table2
+where countOfYear>=2;
+
+
+
+4) Create a view on the top of last query, name it temperature_data_vw.
+
+CREATE VIEW temperature_data_vw as
+select year,
+temperature,
+ranking,
+countOfYear
+FROM
+(select year,
+temperature,
+ranking,
+count(year) over (PARTITION BY YEAR) as countOfYear
+from(
+select YEAR(date) as year ,
+temperature,
+rank() OVER (PARTITION by YEAR(date) ORDER by temperature DESC) AS ranking,
+COUNT(YEAR(date)) OVER (PARTITION by YEAR(date)  ) AS count
+FROM temperature_data
+)table1
+WHERE ranking = 1 
+) table2
+where countOfYear>=2;
+
+
+
+
+5) Export contents from temperature_data_vw to a file in local file system, such that each
+file is '|' delimited.
+
+INSERT OVERWRITE LOCAL DIRECTORY'/home/acadgild/'
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY '|'
+select * from temperature_data_vw;
+
+
+
